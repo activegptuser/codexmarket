@@ -1,9 +1,9 @@
 ---
-name: local-onenote-control
+name: onenote-local
 description: Use the local Microsoft OneNote desktop MCP bridge to list notebooks, search pages, read page text, open pages, create pages, or append plain text.
 ---
 
-# Local OneNote Control
+# OneNote Local
 
 Use this skill when the user wants Codex to control Microsoft OneNote installed on the same Windows machine.
 

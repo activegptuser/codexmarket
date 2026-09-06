@@ -1,8 +1,8 @@
-# Local OneNote Control
+# OneNote Local
 
-Local OneNote Control is a personal Codex plugin for controlling Microsoft OneNote desktop on Windows.
+OneNote Local is a personal Codex plugin for controlling Microsoft OneNote desktop on Windows.
 
-It provides one MCP server, `local-onenote-control`, with tools to:
+It provides one MCP server, `onenote-local`, with tools to:
 
 - check local OneNote automation availability
 - list notebooks, sections, section groups, and pages

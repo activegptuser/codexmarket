@@ -1,6 +1,6 @@
 {
   "mcpServers": {
-    "local-onenote-control": {
+    "onenote-local": {
       "command": "node",
       "args": [
         "./scripts/onenote-mcp-server.mjs"

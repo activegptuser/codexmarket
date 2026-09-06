@@ -1,14 +1,14 @@
 {
-  "name": "personal",
+  "name": "activegptuser",
   "interface": {
-    "displayName": "My Personal Plugins"
+    "displayName": "ActiveGPTUser Personal Plugins"
   },
   "plugins": [
     {
       "name": "onenote-local",
       "source": {
         "source": "local",
-        "path": "./plugins/local-onenote-control"
+        "path": "./plugins/onenote-local"
       },
       "policy": {
         "installation": "AVAILABLE",

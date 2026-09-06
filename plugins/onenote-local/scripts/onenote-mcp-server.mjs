@@ -3,7 +3,7 @@ import { spawn } from "node:child_process";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const SERVER_NAME = "local-onenote-control";
+const SERVER_NAME = "onenote-local";
 const SERVER_VERSION = "0.1.0";
 const PROTOCOL_VERSION = "2024-11-05";
 const scriptDir = dirname(fileURLToPath(import.meta.url));
