@@ -272,6 +272,36 @@ function Add-OutlineText {
     [void]$Document.DocumentElement.AppendChild($outline)
 }
 
+function Find-ExactPageInSection {
+    param(
+        [object]$OneNote,
+        [string]$SectionId,
+        [string]$Title
+    )
+
+    $pages = Get-Hierarchy -OneNote $OneNote -StartNodeId $SectionId -Scope "pages"
+    foreach ($page in @($pages.items)) {
+        if ($page.type -eq "Page" -and $page.name -eq $Title) {
+            return $page
+        }
+    }
+
+    return $null
+}
+
+function Test-JsonObjectHasProperty {
+    param(
+        [object]$Object,
+        [string]$Name
+    )
+
+    if ($null -eq $Object) {
+        return $false
+    }
+
+    return $null -ne $Object.PSObject.Properties[$Name]
+}
+
 $argsObject = Get-InputObject
 $oneNote = New-OneNoteApplication
 
@@ -361,6 +391,110 @@ switch ($Operation) {
             created = $true
             pageId = $pageId
             title = $title
+        })
+    }
+    "create_kanban_page" {
+        $sectionId = [string](Get-JsonProperty -Object $argsObject -Name "sectionId" -DefaultValue "")
+        $title = [string](Get-JsonProperty -Object $argsObject -Name "title" -DefaultValue "")
+        $fields = Get-JsonProperty -Object $argsObject -Name "fields" -DefaultValue $null
+        $sections = Get-JsonProperty -Object $argsObject -Name "sections" -DefaultValue $null
+        $entryIdPrefix = [string](Get-JsonProperty -Object $argsObject -Name "entryIdPrefix" -DefaultValue "")
+        $allowDuplicateTitle = [bool](Get-JsonProperty -Object $argsObject -Name "allowDuplicateTitle" -DefaultValue $false)
+        $openAfterCreate = [bool](Get-JsonProperty -Object $argsObject -Name "openAfterCreate" -DefaultValue $false)
+        if ([string]::IsNullOrWhiteSpace($sectionId)) {
+            throw "sectionId is required."
+        }
+        if ([string]::IsNullOrWhiteSpace($title)) {
+            throw "title is required."
+        }
+
+        if (-not $allowDuplicateTitle) {
+            $existingPage = Find-ExactPageInSection -OneNote $oneNote -SectionId $sectionId -Title $title
+            if ($null -ne $existingPage) {
+                Write-Json ([pscustomobject]@{
+                    created = $false
+                    duplicateTitle = $true
+                    pageId = $existingPage.id
+                    title = $title
+                })
+                break
+            }
+        }
+
+        $pageId = ""
+        $oneNote.CreateNewPage($sectionId, [ref]$pageId, 0)
+        $xmlText = Get-PageXml -OneNote $oneNote -PageId $pageId
+        [xml]$xml = $xmlText
+        Set-PageTitle -Document $xml -NamespaceUri $xml.DocumentElement.NamespaceURI -Title $title
+        $oneNote.UpdatePageContent($xml.OuterXml)
+
+        $fieldUpdatedCount = 0
+        if ($null -ne $fields -and @($fields.PSObject.Properties).Count -gt 0) {
+            $xmlText = Get-PageXml -OneNote $oneNote -PageId $pageId
+            [xml]$xml = $xmlText
+            $updateResult = Update-KanbanFieldsInDocument `
+                -Document $xml `
+                -Fields $fields
+            $patch = New-OneNoteOutlinePatch `
+                -SourceDocument $xml `
+                -PageId $pageId `
+                -Outline $updateResult.Outline
+            $oneNote.UpdatePageContent($patch.OuterXml)
+            $fieldUpdatedCount = $updateResult.UpdatedCount
+        }
+
+        if ([string]::IsNullOrWhiteSpace($entryIdPrefix)) {
+            $entryIdPrefix = "onenote-local.create-kanban-page.$pageId"
+        }
+
+        $sectionResults = @()
+        foreach ($sectionName in @("work", "completion", "prerequisites", "risks")) {
+            if (-not (Test-JsonObjectHasProperty -Object $sections -Name $sectionName)) {
+                continue
+            }
+
+            $items = @(Get-JsonProperty -Object $sections -Name $sectionName -DefaultValue @())
+            if ($items.Count -eq 0) {
+                continue
+            }
+
+            $xmlText = Get-PageXml -OneNote $oneNote -PageId $pageId
+            [xml]$xml = $xmlText
+            $updateResult = Update-KanbanSectionInDocument `
+                -Document $xml `
+                -Section $sectionName `
+                -Mode "append" `
+                -EntryId "$entryIdPrefix.$sectionName" `
+                -Items $items
+
+            if (-not $updateResult.Duplicate) {
+                $patch = New-OneNoteOutlinePatch `
+                    -SourceDocument $xml `
+                    -PageId $pageId `
+                    -Outline $updateResult.Outline
+                $oneNote.UpdatePageContent($patch.OuterXml)
+            }
+
+            $sectionResults += [pscustomobject]@{
+                section = $sectionName
+                updated = -not $updateResult.Duplicate
+                duplicate = $updateResult.Duplicate
+                updatedCount = $updateResult.UpdatedCount
+                entryId = "$entryIdPrefix.$sectionName"
+            }
+        }
+
+        if ($openAfterCreate) {
+            $oneNote.NavigateTo($pageId)
+        }
+
+        Write-Json ([pscustomobject]@{
+            created = $true
+            duplicateTitle = $false
+            pageId = $pageId
+            title = $title
+            fieldUpdatedCount = $fieldUpdatedCount
+            sectionResults = $sectionResults
         })
     }
     "append_text" {

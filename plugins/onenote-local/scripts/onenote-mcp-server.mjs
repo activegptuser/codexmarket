@@ -10,6 +10,7 @@ const scriptDir = dirname(fileURLToPath(import.meta.url));
 const oneNoteScript = resolve(scriptDir, "onenote-com.ps1");
 const powershellPath = "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe";
 const commandTimeoutMs = Number.parseInt(process.env.LOCAL_ONENOTE_TIMEOUT_MS ?? "45000", 10);
+let oneNoteCommandQueue = Promise.resolve();
 
 const tools = [
   {
@@ -128,6 +129,85 @@ const tools = [
     }
   },
   {
+    name: "onenote_create_kanban_page",
+    description: "Create a new Kanban card page from the section template, then fill supported fields and sections without adding a separate body block.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["sectionId", "title"],
+      properties: {
+        sectionId: {
+          type: "string",
+          minLength: 1,
+          description: "OneNote section ID."
+        },
+        title: {
+          type: "string",
+          minLength: 1,
+          description: "New Kanban page title."
+        },
+        fields: {
+          type: "object",
+          minProperties: 1,
+          additionalProperties: false,
+          properties: {
+            assignee: { type: "string", minLength: 1, description: "Value for 담당." },
+            workType: { type: "string", enum: ["신규", "개선", "버그", "요청"], description: "Value for 업무유형." },
+            priority: { type: "string", enum: ["High", "Low"], description: "Value for 우선순위." },
+            effort: { type: "string", minLength: 1, description: "Value for 공수." },
+            createdDate: { type: "string", minLength: 1, description: "Value for 생성일." },
+            dueDate: { type: "string", minLength: 1, description: "Value for 마감일." }
+          },
+          description: "Optional scalar Kanban fields to update after page creation."
+        },
+        sections: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            work: {
+              type: "array",
+              minItems: 1,
+              items: { type: "string", minLength: 1 },
+              description: "Items for 작업(세부 내용)."
+            },
+            completion: {
+              type: "array",
+              minItems: 1,
+              items: { type: "string", minLength: 1 },
+              description: "Items for 완료조건."
+            },
+            prerequisites: {
+              type: "array",
+              minItems: 1,
+              items: { type: "string", minLength: 1 },
+              description: "Items for 선행업무."
+            },
+            risks: {
+              type: "array",
+              minItems: 1,
+              items: { type: "string", minLength: 1 },
+              description: "Items for 리스크 / 이슈."
+            }
+          },
+          description: "Optional supported Kanban sections to append after page creation."
+        },
+        entryIdPrefix: {
+          type: "string",
+          minLength: 1,
+          description: "Optional stable prefix for section idempotency markers. Defaults to a page-specific value."
+        },
+        allowDuplicateTitle: {
+          type: "boolean",
+          description: "Allow creating a page even when the target section already has an exact matching page title."
+        },
+        openAfterCreate: {
+          type: "boolean",
+          description: "Open the page after creating and filling it."
+        }
+      }
+    }
+  },
+  {
     name: "onenote_append_text",
     description: "Append plain text as a new outline block on a local OneNote page.",
     inputSchema: {
@@ -236,6 +316,7 @@ const operationByTool = {
   onenote_read_page: "read_page",
   onenote_open_page: "open_page",
   onenote_create_page: "create_page",
+  onenote_create_kanban_page: "create_kanban_page",
   onenote_append_text: "append_text",
   onenote_update_kanban_fields: "update_kanban_fields",
   onenote_update_kanban_section: "update_kanban_section"
@@ -343,6 +424,15 @@ function runOneNote(operation, args) {
   });
 }
 
+function queueOneNote(operation, args) {
+  const queuedCommand = oneNoteCommandQueue.then(
+    () => runOneNote(operation, args),
+    () => runOneNote(operation, args)
+  );
+  oneNoteCommandQueue = queuedCommand.catch(() => {});
+  return queuedCommand;
+}
+
 async function handleRequest(message) {
   const { id, method, params } = message;
 
@@ -374,7 +464,7 @@ async function handleRequest(message) {
       }
 
       try {
-        const payload = await runOneNote(operation, params?.arguments ?? {});
+        const payload = await queueOneNote(operation, params?.arguments ?? {});
         result(id, asToolContent(payload));
       } catch (toolError) {
         result(id, asToolContent({ error: String(toolError?.message ?? toolError) }, true));
