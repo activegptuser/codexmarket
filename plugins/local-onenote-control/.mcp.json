@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "local-onenote-control": {
+      "command": "node",
+      "args": [
+        "./scripts/onenote-mcp-server.mjs"
+      ],
+      "cwd": "."
+    }
+  }
+}

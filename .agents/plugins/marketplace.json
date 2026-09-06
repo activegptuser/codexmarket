@@ -1,0 +1,20 @@
+{
+  "name": "personal",
+  "interface": {
+    "displayName": "My Personal Plugins"
+  },
+  "plugins": [
+    {
+      "name": "onenote-local",
+      "source": {
+        "source": "local",
+        "path": "./plugins/local-onenote-control"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

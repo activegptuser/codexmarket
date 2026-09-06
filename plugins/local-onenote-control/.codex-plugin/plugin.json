@@ -1,0 +1,28 @@
+{
+  "name": "local-onenote-control",
+  "version": "0.1.0+codex.20260905235609",
+  "description": "Control local Microsoft OneNote through a Windows desktop MCP bridge.",
+  "author": {
+    "name": "Local developer"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Local OneNote Control",
+    "shortDescription": "Read and update local OneNote notebooks.",
+    "longDescription": "A local Windows MCP bridge for Microsoft OneNote desktop. It can list notebooks, sections, and pages, open a page in OneNote, read page text, create pages, and append text through OneNote COM automation.",
+    "developerName": "Local developer",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write",
+      "Local"
+    ],
+    "defaultPrompt": [
+      "List my local OneNote notebooks.",
+      "Find OneNote pages matching a title.",
+      "Append this note to a OneNote page."
+    ]
+  },
+  "mcpServers": "./.mcp.json"
+}
