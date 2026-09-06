@@ -151,6 +151,81 @@ const tools = [
         }
       }
     }
+  },
+  {
+    name: "onenote_update_kanban_fields",
+    description: "Update scalar fields on an existing local OneNote Kanban card.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["pageId", "fields"],
+      properties: {
+        pageId: {
+          type: "string",
+          minLength: 1,
+          description: "OneNote page ID for an existing Kanban card."
+        },
+        fields: {
+          type: "object",
+          minProperties: 1,
+          additionalProperties: false,
+          properties: {
+            assignee: { type: "string", minLength: 1, description: "Value for 담당." },
+            workType: { type: "string", enum: ["신규", "개선", "버그", "요청"], description: "Value for 업무유형." },
+            priority: { type: "string", enum: ["High", "Low"], description: "Value for 우선순위." },
+            effort: { type: "string", minLength: 1, description: "Value for 공수." },
+            createdDate: { type: "string", minLength: 1, description: "Value for 생성일." },
+            dueDate: { type: "string", minLength: 1, description: "Value for 마감일." }
+          },
+          description: "One or more scalar Kanban fields to update."
+        },
+        openAfterUpdate: {
+          type: "boolean",
+          description: "Open the page after updating it."
+        }
+      }
+    }
+  },
+  {
+    name: "onenote_update_kanban_section",
+    description: "Append or replace bullet items in one section of an existing local OneNote Kanban card.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["pageId", "section", "mode", "entryId", "items"],
+      properties: {
+        pageId: {
+          type: "string",
+          minLength: 1,
+          description: "OneNote page ID for an existing Kanban card."
+        },
+        section: {
+          type: "string",
+          enum: ["work", "completion", "prerequisites", "risks"],
+          description: "Target section: 작업(세부 내용), 완료조건, 선행업무, or 리스크 / 이슈."
+        },
+        mode: {
+          type: "string",
+          enum: ["append", "replace"],
+          description: "Append to existing items or replace only this section's items."
+        },
+        entryId: {
+          type: "string",
+          minLength: 1,
+          description: "Stable idempotency key used to prevent duplicate section updates."
+        },
+        items: {
+          type: "array",
+          minItems: 1,
+          items: { type: "string", minLength: 1 },
+          description: "Plain-text bullet items for the target section."
+        },
+        openAfterUpdate: {
+          type: "boolean",
+          description: "Open the page after updating it."
+        }
+      }
+    }
   }
 ];
 
@@ -161,7 +236,9 @@ const operationByTool = {
   onenote_read_page: "read_page",
   onenote_open_page: "open_page",
   onenote_create_page: "create_page",
-  onenote_append_text: "append_text"
+  onenote_append_text: "append_text",
+  onenote_update_kanban_fields: "update_kanban_fields",
+  onenote_update_kanban_section: "update_kanban_section"
 };
 
 function send(message) {

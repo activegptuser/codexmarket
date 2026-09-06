@@ -13,6 +13,8 @@ $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 [Console]::OutputEncoding = $utf8NoBom
 $OutputEncoding = $utf8NoBom
 
+. "$PSScriptRoot\onenote-page-content.ps1"
+
 function Get-InputObject {
     if ([string]::IsNullOrWhiteSpace($InputJson)) {
         return [pscustomobject]@{}
@@ -383,6 +385,78 @@ switch ($Operation) {
         Write-Json ([pscustomobject]@{
             appended = $true
             pageId = $pageId
+        })
+    }
+    "update_kanban_fields" {
+        $pageId = [string](Get-JsonProperty -Object $argsObject -Name "pageId" -DefaultValue "")
+        $fields = Get-JsonProperty -Object $argsObject -Name "fields" -DefaultValue $null
+        $openAfterUpdate = [bool](Get-JsonProperty -Object $argsObject -Name "openAfterUpdate" -DefaultValue $false)
+        if ([string]::IsNullOrWhiteSpace($pageId)) {
+            throw "pageId is required."
+        }
+
+        $xmlText = Get-PageXml -OneNote $oneNote -PageId $pageId
+        [xml]$xml = $xmlText
+        $updateResult = Update-KanbanFieldsInDocument `
+            -Document $xml `
+            -Fields $fields
+
+        $patch = New-OneNoteOutlinePatch `
+            -SourceDocument $xml `
+            -PageId $pageId `
+            -Outline $updateResult.Outline
+        $oneNote.UpdatePageContent($patch.OuterXml)
+
+        if ($openAfterUpdate) {
+            $oneNote.NavigateTo($pageId)
+        }
+
+        Write-Json ([pscustomobject]@{
+            updated = $true
+            updatedCount = $updateResult.UpdatedCount
+            pageId = $pageId
+        })
+    }
+    "update_kanban_section" {
+        $pageId = [string](Get-JsonProperty -Object $argsObject -Name "pageId" -DefaultValue "")
+        $section = [string](Get-JsonProperty -Object $argsObject -Name "section" -DefaultValue "")
+        $mode = [string](Get-JsonProperty -Object $argsObject -Name "mode" -DefaultValue "")
+        $entryId = [string](Get-JsonProperty -Object $argsObject -Name "entryId" -DefaultValue "")
+        $items = @(Get-JsonProperty -Object $argsObject -Name "items" -DefaultValue @())
+        $openAfterUpdate = [bool](Get-JsonProperty -Object $argsObject -Name "openAfterUpdate" -DefaultValue $false)
+        if ([string]::IsNullOrWhiteSpace($pageId)) {
+            throw "pageId is required."
+        }
+
+        $xmlText = Get-PageXml -OneNote $oneNote -PageId $pageId
+        [xml]$xml = $xmlText
+        $updateResult = Update-KanbanSectionInDocument `
+            -Document $xml `
+            -Section $section `
+            -Mode $mode `
+            -EntryId $entryId `
+            -Items $items
+
+        if (-not $updateResult.Duplicate) {
+            $patch = New-OneNoteOutlinePatch `
+                -SourceDocument $xml `
+                -PageId $pageId `
+                -Outline $updateResult.Outline
+            $oneNote.UpdatePageContent($patch.OuterXml)
+        }
+
+        if ($openAfterUpdate) {
+            $oneNote.NavigateTo($pageId)
+        }
+
+        Write-Json ([pscustomobject]@{
+            updated = -not $updateResult.Duplicate
+            duplicate = $updateResult.Duplicate
+            updatedCount = $updateResult.UpdatedCount
+            entryId = $entryId
+            pageId = $pageId
+            section = $section
+            mode = $mode
         })
     }
     default {
