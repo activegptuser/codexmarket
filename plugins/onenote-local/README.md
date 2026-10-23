@@ -14,6 +14,8 @@ It provides one MCP server, `onenote-local`, with tools to:
 - append plain text to a page
 - update scalar fields on an existing Kanban card
 - append or replace idempotent bullet items in a supported Kanban section
+- resolve Dashboard links whose embedded hyperlink IDs are not valid local COM page IDs
+- disambiguate duplicate page titles by notebook, section, and modification time
 
 The bridge uses Windows PowerShell and the `OneNote.Application` COM object. It does not require Microsoft Graph, browser automation, or external npm packages.
 
@@ -27,3 +29,6 @@ The bridge uses Windows PowerShell and the `OneNote.Application` COM object. It 
 - `onenote_update_kanban_fields` updates only `assignee`, `workType`, `priority`, `effort`, `createdDate`, and `dueDate` on the CrossDetect card template.
 - `onenote_update_kanban_section` targets `work`, `completion`, `prerequisites`, or `risks`; it supports `append` and `replace`, preserves the surrounding outline, and requires an `entryId` to prevent duplicate writes.
 - OneNote cloud sync is owned by OneNote itself; a successful local write does not prove remote sync completion.
+- Dashboard collection should start with plain-text reads. If a hyperlink ID returns HRESULT `0x80042005`, search the exact page title and retry with the returned local page ID.
+- When an exact-title search returns duplicates, prefer the expected notebook and section, then the most recently modified page. Read remaining candidates when the choice is still ambiguous.
+- OneNote COM calls are serialized by the bridge. Batched page reads can still complete one at a time.

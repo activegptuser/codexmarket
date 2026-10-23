@@ -1,0 +1,24 @@
+{
+  "name": "weekly-work-report",
+  "version": "0.1.0",
+  "description": "Create a one-page Korean software weekly work report from OneNote task histories while preserving an existing Excel template.",
+  "author": {
+    "name": "activegptuser"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "주간업무보고 작성",
+    "shortDescription": "OneNote 이력을 기존 Excel 양식의 한 페이지 보고서로 작성",
+    "longDescription": "Reads the 동원정밀 OneNote Dashboard and linked task histories, classifies Completed and Doing work, and patches a copied XLSX template without rebuilding its worksheet package.",
+    "developerName": "activegptuser",
+    "category": "Productivity",
+    "capabilities": [
+      "Read",
+      "Local"
+    ],
+    "defaultPrompt": [
+      "이번 주 주간업무보고를 작성해줘.",
+      "OneNote Dashboard를 참조하여 주간업무현황을 작성해줘."
+    ]
+  }
+}

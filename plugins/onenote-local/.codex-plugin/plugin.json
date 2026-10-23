@@ -1,6 +1,6 @@
 {
   "name": "onenote-local",
-  "version": "0.1.0+codex.20260906043259",
+  "version": "0.1.1",
   "description": "Control local Microsoft OneNote through a Windows desktop MCP bridge.",
   "author": {
     "name": "activegptuser"
